@@ -1,0 +1,162 @@
+#this part is only a simple example of scanpy processing to get a list of genes
+import numpy as np
+import scanpy as sc
+import pandas as pd
+from matplotlib.pyplot import rc_context
+
+my_data_path = 'path/to/data/outs/filtered_feature_bc_matrix'
+
+def pp(path):
+ 
+    
+    
+    #find markers
+    results = adata.uns['rank_genes_groups']
+    out = np.array([[0,0,0,0,0]])
+    for group in results['names'].dtype.names:
+        out = np.vstack((out, np.vstack((results['names'][group],
+                                         results['scores'][group],
+                                         results['pvals_adj'][group],
+                                         results['logfoldchanges'][group],
+                                         np.array([group] * len(results['names'][group])).astype('object'))).T))
+    markers = pd.DataFrame(out[1:], columns = ['Gene', 'scores', 'pval_adj', 'lfc', 'cluster'])
+    adata.uns['markers'] = markers #save marker df to uns
+
+    
+    return adata
+adata = pp(my_data_path)
+
+# Go  analysis start here
+
+
+
+from genes_ncbi_mus_musculus_proteincoding import GENEID2NT as GeneID2nt_mus
+
+
+
+#run one time to initialize
+obo_fname = download_go_basic_obo()
+fin_gene2go = download_ncbi_associations()
+obodag = GODag("go-basic.obo")
+
+
+
+
+
+#run one time to initialize
+mapper = {}
+
+for key in GeneID2nt_mus:
+    mapper[GeneID2nt_mus[key].Symbol] = GeneID2nt_mus[key].GeneID
+    
+inv_map = {v: k for k, v in mapper.items()}
+
+
+
+
+
+#run one time to initialize
+
+# Read NCBI's gene2go. Store annotations in a list of namedtuples
+objanno = Gene2GoReader(fin_gene2go, taxids=[10090])
+# Get namespace2association where:
+#    namespace is:
+#        BP: biological_process               
+#        MF: molecular_function
+#        CC: cellular_component
+#    assocation is a dict:
+#        key: NCBI GeneID
+#        value: A set of GO IDs associated with that gene
+ns2assoc = objanno.get_ns2assc()
+
+
+
+#run one time to initialize
+goeaobj = GOEnrichmentStudyNS(
+        GeneID2nt_mus.keys(), # List of mouse protein-coding genes
+        ns2assoc, # geneid/GO associations
+        obodag, # Ontologies
+        propagate_counts = False,
+        alpha = 0.05, # default significance cut-off
+        methods = ['fdr_bh']) # defult multipletest correction method
+
+
+#run one time to initialize
+GO_items = []
+
+temp = goeaobj.ns2objgoea['BP'].assoc
+for item in temp:
+    GO_items += temp[item]
+    
+
+temp = goeaobj.ns2objgoea['CC'].assoc
+for item in temp:
+    GO_items += temp[item]
+    
+
+temp = goeaobj.ns2objgoea['MF'].assoc
+for item in temp:
+    GO_items += temp[item]
+
+
+
+#pass list of gene symbols
+def go_it(test_genes):
+    print(f'input genes: {len(test_genes)}')
+    
+    mapped_genes = []
+    for gene in test_genes:
+        try:
+            mapped_genes.append(mapper[gene])
+        except:
+            pass
+    print(f'mapped genes: {len(mapped_genes)}')
+    
+    goea_results_all = goeaobj.run_study(mapped_genes)
+    goea_results_sig = [r for r in goea_results_all if r.p_fdr_bh < 0.05]
+    GO = pd.DataFrame(list(map(lambda x: [x.GO, x.goterm.name, x.goterm.namespace, x.p_uncorrected, x.p_fdr_bh,\
+                   x.ratio_in_study[0], x.ratio_in_study[1], GO_items.count(x.GO), list(map(lambda y: inv_map[y], x.study_items)),\
+                   ], goea_results_sig)), columns = ['GO', 'term', 'class', 'p', 'p_corr', 'n_genes',\
+                                                    'n_study', 'n_go', 'study_genes'])
+
+    GO = GO[GO.n_genes > 1]
+    return GO
+
+
+
+
+
+df = go_it( TA_CTR.Gene.values)
+df=df[df["class"] =="biological_process"]
+
+df['per'] = df.n_genes/df.n_go
+df['term_go'] = df['term'] + ' ' + df['GO']
+df=df[:20]
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib import cm
+import seaborn as sns
+import textwrap
+
+
+
+fig, ax = plt.subplots(figsize = (0.5, 2.75))
+
+cmap = mpl.cm.bwr_r
+norm = mpl.colors.Normalize(vmin = df.p_corr.min(), vmax = df.p_corr.max())
+
+mapper = cm.ScalarMappable(norm = norm, cmap = cm.bwr_r)
+
+cbl = mpl.colorbar.ColorbarBase(ax, cmap = cmap, norm = norm, orientation = 'vertical')
+
+
+
+plt.figure(figsize = (8,100))
+
+
+
+ax = sns.barplot(data = df ,x = 'per', y = 'term_go', palette = mapper.to_rgba(df.p_corr.values))
+
+ax.set_yticklabels([textwrap.fill(e, 25) for e in df['term_go']])
+
+plt.show()
