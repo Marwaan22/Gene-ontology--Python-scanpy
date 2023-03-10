@@ -4,7 +4,9 @@ Script of GO analysis and  creating stress pathway index and visualization
 
 
 Documentation of the script function 
-•	Import the required module, "genes_ncbi_mus_musculus_proteincoding," which contains a dictionary of mouse protein-coding gene IDs and their corresponding symbols.
+
+•   	Import the required module, "genes_ncbi_mus_musculus_proteincoding," which contains a dictionary of mouse protein-coding gene IDs and their c         orresponding symbols.
+
 •	    Download the Gene Ontology Basic OBO file and the NCBI Gene2Go annotation file, which are necessary for GO enrichment analysis.
 •	    Create an instance of the GODag class, which represents the Gene Ontology hierarchy.
 •	    Create a mapper that maps gene symbols to gene IDs.
