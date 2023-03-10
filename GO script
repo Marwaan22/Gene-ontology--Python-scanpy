@@ -27,7 +27,17 @@ def pp(path):
 adata = pp(my_data_path)
 
 # Go  analysis start here
+!pip install goatools
+#first need to make background gene set
 
+#https://www.ncbi.nlm.nih.gov/gene
+#"10090"[Taxonomy ID] AND alive[property] AND genetype protein coding[Properties]
+#human is 9606
+
+#send to file
+!mv path/to/Downloads/gene_result.txt .
+!python path/to/miniconda3/envs/sc/bin/ncbi_gene_results_to_python.py -o genes_ncbi_mus_musculus_proteincoding.py gene_result.txt
+#move created file to default import location so you dont have to make every time
 
 
 from genes_ncbi_mus_musculus_proteincoding import GENEID2NT as GeneID2nt_mus
